@@ -1,0 +1,37 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 22
+    buildToolsVersion "22.0.1"
+    defaultConfig {
+        applicationId "com.intmainreturn0.myapplication"
+        minSdkVersion 15
+        targetSdkVersion 22
+        versionCode 2
+        versionName '1.1'
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    productFlavors {
+    }
+}
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    compile fileTree(include: ['*.jar'], dir: 'libs')
+    compile files('/media/lz/000911A5000C026B/MyApplication/libs/tileviewlib-1.0.13.jar')
+    compile 'com.doomonafireball.betterpickers:library:1.6.0'
+    compile 'com.doomonafireball.betterpickers:library:1.6.0'
+    compile 'com.android.support:appcompat-v7:22.1.1'
+    compile 'com.github.navasmdc:MaterialDesign:1.5@aar'
+    compile 'com.jakewharton:disklrucache:2.0.2'
+    compile 'com.android.support:support-v4:22.1.1'
+    compile 'it.sephiroth.android.library.imagezoom:imagezoom:+'
+    compile project(':mylibrary')
+}
