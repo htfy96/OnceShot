@@ -3,7 +3,6 @@ package com.intmainreturn0.myapplication;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
@@ -20,6 +19,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -28,8 +28,9 @@ import com.doomonafireball.betterpickers.datepicker.DatePickerBuilder;
 import com.doomonafireball.betterpickers.datepicker.DatePickerDialogFragment;
 import com.doomonafireball.betterpickers.timepicker.TimePickerBuilder;
 import com.gc.materialdesign.widgets.Dialog;
-import com.intmainreturn0.myapplication.util.LargeImageTileViewActivity;
-import com.intmainreturn0.mylibrary.SlideCutListView;
+import com.nhaarman.listviewanimations.appearance.simple.AlphaInAnimationAdapter;
+import com.nhaarman.listviewanimations.itemmanipulation.DynamicListView;
+import com.nhaarman.listviewanimations.itemmanipulation.swipedismiss.OnDismissCallback;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -38,13 +39,15 @@ import java.util.Calendar;
 import java.util.Date;
 
 
+
 public class MainActivity extends ActionBarActivity implements DatePickerDialogFragment.DatePickerDialogHandler {
 
     public static final int MEDIA_TYPE_IMAGE = 1;
     public static final int MEDIA_TYPE_VIDEO = 2;
+    public boolean toRefresh = false;
     public TimePickerBuilder tpb;
     public DatePickerBuilder dpb;
-    public SlideCutListView lv;
+    public DynamicListView lv;
     public ArrayList<Info> infos;
     public MyListAdapter ma;
     public AdapterView.OnItemClickListener icl;
@@ -170,7 +173,10 @@ public class MainActivity extends ActionBarActivity implements DatePickerDialogF
         Intent intent=new Intent(this, MyIntentService.class);
         alarmIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
         alarmMgr.setInexactRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP, AlarmManager.INTERVAL_FIFTEEN_MINUTES, AlarmManager.INTERVAL_FIFTEEN_MINUTES, alarmIntent);
-        refreshInfos();
+        if (toRefresh) {
+            refreshInfos();
+            toRefresh = false;
+        }
     }
 
     @Override
@@ -191,31 +197,37 @@ public class MainActivity extends ActionBarActivity implements DatePickerDialogF
             {
                 Intent i = new Intent(MainActivity.this, LargeImageTileViewActivity.class);
                 i.putExtra("fn",( (Info)(adapterView.getItemAtPosition(arg2))).pat);
+                i.putExtra("description",( (Info)(adapterView.getItemAtPosition(arg2))).msg);
                 startActivity(i);
             }
         };
 
 
-        lv = (SlideCutListView)findViewById(R.id.listView) ;
-        lv.setRemoveListener(new SlideCutListView.RemoveListener() {
-            @Override
-            public void removeItem(SlideCutListView.RemoveDirection direction, int position) {
-                Info i = (Info)lv.getItemAtPosition(position);
-                SQLiteDatabase db=openOrCreateDatabase("ifttt.db",MainActivity.MODE_MULTI_PROCESS,null);
-                db.execSQL("CREATE TABLE IF NOT EXISTS t (date text, filename text, msg text)");
-                File f= new File(i.pat);
-                if (f.exists())
-                    f.delete();
+        lv = (DynamicListView)findViewById(R.id.listView) ;
+        lv.enableSwipeToDismiss(
+                new OnDismissCallback() {
+                    @Override
+                    public void onDismiss(ViewGroup viewGroup, int[] ints) {
+                        int position = ints[0];
+                        Info i = (Info)lv.getItemAtPosition(position);
+                        SQLiteDatabase db=openOrCreateDatabase("ifttt.db",MainActivity.MODE_MULTI_PROCESS,null);
+                        db.execSQL("CREATE TABLE IF NOT EXISTS t (date text, filename text, msg text)");
+                        File f= new File(i.pat);
+                        if (f.exists())
+                            f.delete();
 
-                db.execSQL("DELETE from t where filename=?",new Object[]{i.pat});
-                db.close();
-                refreshInfos();
+                        db.execSQL("DELETE from t where filename=?",new Object[]{i.pat});
+                        db.close();
+                        refreshInfos();
+                    }
+                }
+        );
 
-            }
-        });
         infos = new ArrayList<Info>();
         ma = new MyListAdapter(this, infos);
-        lv.setAdapter(ma);
+        AlphaInAnimationAdapter animationAdapter = new AlphaInAnimationAdapter(ma);
+        animationAdapter.setAbsListView(lv);
+        lv.setAdapter(animationAdapter);
         lv.setOnItemClickListener(icl);
 
         lv.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
@@ -360,6 +372,7 @@ public class MainActivity extends ActionBarActivity implements DatePickerDialogF
             Intent intent=new Intent(this, MyIntentService.class);
             alarmIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
             alarmMgr.setInexactRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP, AlarmManager.INTERVAL_FIFTEEN_MINUTES, AlarmManager.INTERVAL_FIFTEEN_MINUTES, alarmIntent);
+            toRefresh = true;
 
 
         }

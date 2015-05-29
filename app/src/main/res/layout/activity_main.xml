@@ -9,7 +9,7 @@
         android:layout_height="match_parent"
         >
 
-        <com.intmainreturn0.mylibrary.SlideCutListView
+        <com.nhaarman.listviewanimations.itemmanipulation.DynamicListView
 
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

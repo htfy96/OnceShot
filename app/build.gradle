@@ -7,8 +7,8 @@ android {
         applicationId "com.intmainreturn0.myapplication"
         minSdkVersion 15
         targetSdkVersion 22
-        versionCode 2
-        versionName '1.1'
+        versionCode 3
+        versionName '1.2'
     }
     buildTypes {
         release {
@@ -21,6 +21,8 @@ android {
 
 repositories {
     jcenter()
+    mavenCentral()
+
 }
 
 dependencies {
@@ -33,5 +35,9 @@ dependencies {
     compile 'com.jakewharton:disklrucache:2.0.2'
     compile 'com.android.support:support-v4:22.1.1'
     compile 'it.sephiroth.android.library.imagezoom:imagezoom:+'
+    compile 'com.nhaarman.listviewanimations:lib-core:3.1.0@aar'
+    compile 'com.nhaarman.listviewanimations:lib-manipulation:3.1.0@aar'
+    compile 'com.nhaarman.listviewanimations:lib-core-slh:3.1.0@aar'
     compile project(':mylibrary')
+    compile files('/media/lz/000911A5000C026B/MyApplication/libs/hcicloud-3.9.jar')
 }
