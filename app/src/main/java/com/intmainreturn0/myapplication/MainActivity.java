@@ -3,13 +3,21 @@ package com.intmainreturn0.myapplication;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.net.wifi.p2p.WifiP2pConfig;
+import android.net.wifi.p2p.WifiP2pDevice;
+import android.net.wifi.p2p.WifiP2pDeviceList;
+import android.net.wifi.p2p.WifiP2pGroup;
+import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -53,6 +61,12 @@ public class MainActivity extends ActionBarActivity implements DatePickerDialogF
     public AdapterView.OnItemClickListener icl;
     private AlarmManager alarmMgr;
     private PendingIntent alarmIntent;
+    WifiP2pManager mManager;
+    WifiP2pManager.Channel mChannel;
+    BroadcastReceiver mReceiver;
+    IntentFilter mIntentFilter;
+
+
 
     /** Create a file Uri for saving an image or video */
     private static Uri getOutputMediaFileUri(int type){
@@ -209,14 +223,14 @@ public class MainActivity extends ActionBarActivity implements DatePickerDialogF
                     @Override
                     public void onDismiss(ViewGroup viewGroup, int[] ints) {
                         int position = ints[0];
-                        Info i = (Info)lv.getItemAtPosition(position);
-                        SQLiteDatabase db=openOrCreateDatabase("ifttt.db",MainActivity.MODE_MULTI_PROCESS,null);
+                        Info i = (Info) lv.getItemAtPosition(position);
+                        SQLiteDatabase db = openOrCreateDatabase("ifttt.db", MainActivity.MODE_MULTI_PROCESS, null);
                         db.execSQL("CREATE TABLE IF NOT EXISTS t (date text, filename text, msg text)");
-                        File f= new File(i.pat);
+                        File f = new File(i.pat);
                         if (f.exists())
                             f.delete();
 
-                        db.execSQL("DELETE from t where filename=?",new Object[]{i.pat});
+                        db.execSQL("DELETE from t where filename=?", new Object[]{i.pat});
                         db.close();
                         refreshInfos();
                     }
@@ -233,7 +247,7 @@ public class MainActivity extends ActionBarActivity implements DatePickerDialogF
         lv.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
-                AlertDialog.Builder b= new AlertDialog.Builder(MainActivity.this);
+                AlertDialog.Builder b = new AlertDialog.Builder(MainActivity.this);
                 b.setTitle("更改简记");
                 final EditText input = new EditText(MainActivity.this);
                 input.setText(((Info) lv.getItemAtPosition(position)).msg);
@@ -255,7 +269,7 @@ public class MainActivity extends ActionBarActivity implements DatePickerDialogF
 
                 });
                 SQLiteDatabase db = initSQL();
-                if( db.rawQuery("Select * from t where filename=?",new String[]{ ((Info) lv.getItemAtPosition(position)).pat }  ).getCount()>0)
+                if (db.rawQuery("Select * from t where filename=?", new String[]{((Info) lv.getItemAtPosition(position)).pat}).getCount() > 0)
                     b.show();
 
                 db.close();
@@ -263,13 +277,88 @@ public class MainActivity extends ActionBarActivity implements DatePickerDialogF
                 return true;
             }
         });
-                Toast.makeText(getApplicationContext(), "读取图片中...",
+
+
+        mManager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
+        mChannel = mManager.initialize(this, getMainLooper(), null);
+        mReceiver = new WiFiDirectBroadcastReceiver(mManager, mChannel, this);
+
+        mIntentFilter = new IntentFilter();
+        mIntentFilter.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
+        mIntentFilter.addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION);
+        mIntentFilter.addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION);
+        mIntentFilter.addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
+
+
+        Toast.makeText(getApplicationContext(), "读取图片中...",
                         Toast.LENGTH_SHORT).show();
         refreshInfos();
         Toast.makeText(getApplicationContext(), "读取完成",
                 Toast.LENGTH_SHORT).show();
 
+
     }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        registerReceiver(mReceiver, mIntentFilter);
+    }
+    /* unregister the broadcast receiver */
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unregisterReceiver(mReceiver);
+    }
+
+
+    public void bClick2(View view)
+    {
+        Log.d("ifttt","b2");
+        mManager.createGroup(mChannel, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+                Log.d("ifttt","succ");
+            }
+
+            @Override
+            public void onFailure(int reason) {
+                Log.d("ifttt", String.valueOf(reason));
+            }
+        });
+    }
+
+    public void bClick3(View view)
+    {
+        Log.d("ifttt","b3");
+        mManager.requestPeers(mChannel, new WifiP2pManager.PeerListListener() {
+            @Override
+            public void onPeersAvailable(WifiP2pDeviceList peers) {
+                for (WifiP2pDevice c:peers.getDeviceList())
+                {
+                    if (c.isGroupOwner())
+                    {
+                        WifiP2pConfig wf = new WifiP2pConfig();
+                        wf.deviceAddress=c.deviceAddress;
+                        
+                        mManager.connect(mChannel, wf, new WifiP2pManager.ActionListener() {
+                            @Override
+                            public void onSuccess() {
+
+                            }
+
+                            @Override
+                            public void onFailure(int reason) {
+
+                            }
+                        });
+                    }
+                }
+            }
+        });
+
+    }
+
 
     public SQLiteDatabase initSQL()
     {
