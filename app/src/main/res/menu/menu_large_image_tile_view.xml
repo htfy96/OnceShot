@@ -1,7 +1,11 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    tools:context="com.intmainreturn0.myapplication.LargeImageTileViewActivity">
+    xmlns:tools="http://schemas.android.com/tools" >
+    <item android:id="@+id/action_rotate"
+        app:showAsAction="ifRoom"
+        android:title="旋转"
+    android:icon="@drawable/ic_action_rotate"
+    />
     <item android:id="@+id/action_ocr"
         app:showAsAction="ifRoom"
         android:title="OCR"/>

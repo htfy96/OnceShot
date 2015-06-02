@@ -92,6 +92,14 @@ public class LargeImageTileViewActivity extends ActionBarActivity  {
                 ocrFile();
                 return true;
             }
+            case R.id.action_rotate:
+            {
+                mImage = (ImageViewTouch)findViewById(R.id.image);
+                bm = rotateBitmap(90,bm);
+                mImage.setImageBitmap(bm);
+                mImage.resetDisplay();
+                return true;
+            }
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -153,7 +161,7 @@ public class LargeImageTileViewActivity extends ActionBarActivity  {
         String sSessionConfig="capKey=ocr.cloud.chinese";
         errCode = HciCloudOcr.hciOcrSessionStart(sSessionConfig, mSessionId);
         Log.d("ifttt", String.valueOf(errCode));
-        errCode = HciCloudOcr.hciOcrSetImageFile(mSessionId, i.getStringExtra("fn"));
+        errCode = HciCloudOcr.hciOcrSetImageByAndroidBitmap(mSessionId, bm);
         Log.d("ifttt", String.valueOf(errCode));
         String sRecogCfg = "autoDeskew=yes";
         ArrayList<OcrRecogRegion> recogRegion = null;
@@ -278,16 +286,63 @@ public class LargeImageTileViewActivity extends ActionBarActivity  {
 
     }
 
+    private static int computeInitialSampleSize(BitmapFactory.Options options,int minSideLength, int maxNumOfPixels) {
+        double w = options.outWidth;
+        double h = options.outHeight;
+        int lowerBound = (maxNumOfPixels == -1) ? 1 : (int) Math.ceil(Math.sqrt(w * h / maxNumOfPixels));
+        int upperBound = (minSideLength == -1) ? 128 :(int) Math.min(Math.floor(w / minSideLength), Math.floor(h / minSideLength));
+        if (upperBound < lowerBound) {
+            // return the larger one when there is no overlapping zone.
+            return lowerBound;
+        }
+        if ((maxNumOfPixels == -1) && (minSideLength == -1)) {
+            return 1;
+        } else if (minSideLength == -1) {
+            return lowerBound;
+        } else {
+            return upperBound;
+        }
+    }
+    public static int computeSampleSize(BitmapFactory.Options options, int minSideLength, int maxNumOfPixels) {
+        int initialSize = computeInitialSampleSize(options, minSideLength, maxNumOfPixels);
+        int roundedSize;
+        if (initialSize <= 8) {
+            roundedSize = 1;
+            while (roundedSize < initialSize) {
+                roundedSize <<= 1;
+            }
+        } else {
+            roundedSize = (initialSize + 7) / 8 * 8;
+        }
+        return roundedSize;
+    }
+
+    public static Bitmap createImageThumbnail(String filePath){
+        Bitmap bitmap = null;
+        BitmapFactory.Options opts = new BitmapFactory.Options();
+        opts.inJustDecodeBounds = true;
+        BitmapFactory.decodeFile(filePath, opts);
+
+        opts.inSampleSize = computeSampleSize(opts, -1, 1680*1024);
+        opts.inJustDecodeBounds = false;
+
+        try {
+            bitmap = BitmapFactory.decodeFile(filePath, opts);
+        }catch (Exception e) {
+            // TODO: handle exception
+        }
+        return bitmap;
+    }
 
     public static Bitmap rotateBitmap(int degree, Bitmap bitmap) {
         Matrix matrix = new Matrix();
         matrix.postRotate(degree);
 
-        Bitmap bm = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth() *5/6,
-                bitmap.getHeight()*5/6, matrix, true);
-        return bm;
-    }
 
+        bitmap = Bitmap.createBitmap(bitmap,0,0,bitmap.getWidth(),bitmap.getHeight(),matrix,true);
+        return bitmap;
+    }
+    private Bitmap bm;
     @Override
     public void onStart()
     {
@@ -296,14 +351,21 @@ public class LargeImageTileViewActivity extends ActionBarActivity  {
 
         Intent i = getIntent();
         String s = i.getStringExtra("fn");
+        if (i == null) return;
+
+        if (bm != null && !bm.isRecycled()) bm.recycle();
         System.gc();
-        Bitmap bm = BitmapFactory.decodeFile(s);
+        bm = createImageThumbnail(s);
+
         Log.d("ifttt", s);
         mImage.setDisplayType(DisplayType.FIT_TO_SCREEN);
         mImage.setScrollEnabled(true);
         mImage.setQuickScaleEnabled(true);
         if (bm != null)
         mImage.setImageBitmap(rotateBitmap( readPicDegree(s), bm));
+        mImage.setScaleEnabled(true);
+        mImage.setDoubleTapEnabled(true);
+        System.gc();
 
     }
 }
