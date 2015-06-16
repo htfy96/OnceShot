@@ -21,10 +21,13 @@ import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.AlertDialog;
+import android.support.v7.widget.ShareActionProvider;
 import android.util.Log;
 import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -61,9 +64,6 @@ public class MainActivity extends ActionBarActivity implements DatePickerDialogF
     public AdapterView.OnItemClickListener icl;
     private AlarmManager alarmMgr;
     private PendingIntent alarmIntent;
-    WifiP2pManager mManager;
-    WifiP2pManager.Channel mChannel;
-    BroadcastReceiver mReceiver;
     IntentFilter mIntentFilter;
 
 
@@ -279,9 +279,6 @@ public class MainActivity extends ActionBarActivity implements DatePickerDialogF
         });
 
 
-        mManager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
-        mChannel = mManager.initialize(this, getMainLooper(), null);
-        mReceiver = new WiFiDirectBroadcastReceiver(mManager, mChannel, this);
 
         mIntentFilter = new IntentFilter();
         mIntentFilter.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
@@ -299,65 +296,6 @@ public class MainActivity extends ActionBarActivity implements DatePickerDialogF
 
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        registerReceiver(mReceiver, mIntentFilter);
-    }
-    /* unregister the broadcast receiver */
-    @Override
-    protected void onPause() {
-        super.onPause();
-        unregisterReceiver(mReceiver);
-    }
-
-
-    public void bClick2(View view)
-    {
-        Log.d("ifttt","b2");
-        mManager.createGroup(mChannel, new WifiP2pManager.ActionListener() {
-            @Override
-            public void onSuccess() {
-                Log.d("ifttt","succ");
-            }
-
-            @Override
-            public void onFailure(int reason) {
-                Log.d("ifttt", String.valueOf(reason));
-            }
-        });
-    }
-
-    public void bClick3(View view)
-    {
-        Log.d("ifttt","b3");
-        mManager.requestPeers(mChannel, new WifiP2pManager.PeerListListener() {
-            @Override
-            public void onPeersAvailable(WifiP2pDeviceList peers) {
-                for (WifiP2pDevice c:peers.getDeviceList())
-                {
-                    if (c.isGroupOwner())
-                    {
-                        WifiP2pConfig wf = new WifiP2pConfig();
-                        wf.deviceAddress=c.deviceAddress;
-                        
-                        mManager.connect(mChannel, wf, new WifiP2pManager.ActionListener() {
-                            @Override
-                            public void onSuccess() {
-
-                            }
-
-                            @Override
-                            public void onFailure(int reason) {
-
-                            }
-                        });
-                    }
-                }
-            }
-        });
-
-    }
 
 
     public SQLiteDatabase initSQL()
@@ -376,7 +314,8 @@ public class MainActivity extends ActionBarActivity implements DatePickerDialogF
         alarmIntent = PendingIntent.getBroadcast(this, 0, intent, 0);alarmMgr.setInexactRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP, AlarmManager.INTERVAL_FIFTEEN_MINUTES, AlarmManager.INTERVAL_FIFTEEN_MINUTES, alarmIntent);
 
         SQLiteDatabase db= initSQL();
-        Cursor c=db.rawQuery("SELECT * FROM t ORDER BY date ", null);
+        Cursor c=db.rawQuery("SELECT * FROM t where date>? ORDER BY date",new String[]{
+                new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new Date())} );
         infos.clear();
         System.gc();
         System.runFinalization();
@@ -389,7 +328,7 @@ public class MainActivity extends ActionBarActivity implements DatePickerDialogF
             infos.add(
                     new Info(
                     createImageThumbnail(c.getString(c.getColumnIndex("filename"))),
-                    f.getName()+"\n待删除时间："+c.getString(c.getColumnIndex("date")),
+                    f.getName()+"\n待删除时间："+c.getString(c.getColumnIndex("date")).substring(0,10),
                             f.getPath(),c.getString(c.getColumnIndex("msg"))
             )
             );
@@ -401,8 +340,13 @@ public class MainActivity extends ActionBarActivity implements DatePickerDialogF
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu_main, menu);
+
+
+        return super.onCreateOptionsMenu(menu);
         // Inflate the menu; this adds items to the action bar if it is present.
-        return false;
+
     }
 
     @Override
@@ -414,6 +358,8 @@ public class MainActivity extends ActionBarActivity implements DatePickerDialogF
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            Intent i = new Intent(MainActivity.this,WifiViewActivity.class);
+            startActivity(i);
             return true;
         }
 

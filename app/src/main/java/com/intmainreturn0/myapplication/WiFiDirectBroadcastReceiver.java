@@ -27,11 +27,11 @@ public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
 
     private WifiP2pManager mManager;
     private WifiP2pManager.Channel mChannel;
-    private MainActivity MainActivity;
+    private WifiViewActivity MainActivity;
     public boolean inConnection=false;
 
     public WiFiDirectBroadcastReceiver(WifiP2pManager manager, WifiP2pManager.Channel channel,
-                                       MainActivity activity) {
+                                       WifiViewActivity activity) {
         super();
         this.mManager = manager;
         this.mChannel = channel;
@@ -47,9 +47,7 @@ public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
             int state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
 
             if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
-                Toast.makeText(MainActivity,"ENABLED",Toast.LENGTH_SHORT).show();
             } else {
-                Toast.makeText(MainActivity,"DISABLED",Toast.LENGTH_SHORT).show();
             }
 
         } else if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
@@ -59,9 +57,15 @@ public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
 
                 public void onPeersAvailable(WifiP2pDeviceList peers) {
 
+                MainActivity.aa.clear();MainActivity.ds.clear();
 
+                    for (WifiP2pDevice c: peers.getDeviceList())
+                    {
+                        MainActivity.aa.add(c.toString());
+                        MainActivity.ds.add(c.deviceAddress);
+                    }
 
-                    Toast.makeText(MainActivity,peers.toString(),Toast.LENGTH_SHORT).show();
+                    MainActivity.aa.notifyDataSetChanged();
                 }
             });
 
